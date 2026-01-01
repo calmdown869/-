@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>המשחק של עידו - שלבי שדרוג</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700;800&display=swap');
+
+        body {
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            color: white;
+            font-family: 'Assistant', sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        .stats-bar {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .character-container {
+            position: relative;
+            width: 300px;
+            height: 400px;
+            margin: 20px auto;
+            border-radius: 30px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .character-container:active {
+            transform: scale(0.95);
+        }
+
+        .character-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 20px;
+            pointer-events: none;
+        }
+
+        #hit-element {
+            position: fixed;
+            font-size: 60px;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(0);
+            transition: opacity 0.3s, transform 0.5s ease-out;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+            color: #22d3ee;
+            font-weight: bold;
+        }
+
+        .hit-active {
+            opacity: 1 !important;
+            transform: translateY(-100px) scale(1.5) !important;
+        }
+
+        .notification {
+            position: fixed;
+            top: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-weight: bold;
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+            z-index: 1000;
+            display: none;
+            pointer-events: none;
+        }
+
+        .tool-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .tool-btn.active {
+            border-color: #22d3ee;
+            background: rgba(34, 211, 238, 0.2);
+            transform: scale(1.1);
+        }
+
+        .tool-btn.locked {
+            opacity: 0.3;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .tool-btn.locked::after {
+            content: "🔒";
+            position: absolute;
+            font-size: 10px;
+            bottom: -3px;
+            right: -3px;
+        }
+
+        /* עיצובי כפתורי שדרוג */
+        .btn-upgrade-iphone { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .btn-upgrade-watch { background: linear-gradient(135deg, #a855f7, #7e22ce); }
+        .btn-upgrade-capcut { background: linear-gradient(135deg, #0f172a, #334155); border: 1px solid white; }
+        .btn-upgrade-falafel { background: linear-gradient(135deg, #84cc16, #65a30d); }
+        .btn-next-level { background: linear-gradient(135deg, #10b981, #059669); }
+
+        button:disabled {
+            background: #475569 !important;
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none !important;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #22d3ee, #3b82f6);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hit-element">+1</div>
+
+    <div class="stats-bar flex flex-col p-4 fixed top-0 w-full z-50">
+        <div class="flex justify-between items-center w-full">
+            <div class="flex items-center gap-4">
+                <div class="stat-card flex items-center gap-2">
+                    <span id="score" class="text-3xl font-extrabold text-cyan-400">0</span>
+                    <span class="text-2xl">📱</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="text-xs ml-1 text-gray-400">שלב</span>
+                <span id="level-count" class="font-bold text-yellow-400">1</span>
+            </div>
+        </div>
+        <div class="text-center mt-2 text-xs text-gray-400">
+            יעד לשלב הנוכחי: <span id="target-display">3000</span> 📱
+        </div>
+        <div class="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <div class="flex flex-col items-center justify-center min-h-screen pt-32 pb-12 px-6">
+        
+        <div id="character-wrapper" class="character-container" onmousedown="handleHit(event)" ontouchstart="handleHit(event)">
+            <!-- התמונה המקומית שלך -->
+            <img id="main-char" src="abc.png" class="character-img" alt="דמות המשחק" onerror="handleImageError(this)">
+        </div>
+
+        <!-- תיק כלים (Inventory) -->
+        <div class="flex gap-2 mb-6 flex-wrap justify-center">
+            <button id="tool-fist" title="אגרוף" onclick="selectTool('fist')" class="tool-btn active">👊</button>
+            <button id="tool-iphone" title="אייפון" onclick="selectTool('iphone')" class="tool-btn locked">📱</button>
+            <button id="tool-watch" title="שעון יד" onclick="selectTool('watch')" class="tool-btn locked">⌚</button>
+            <button id="tool-capcut" title="עריכת וידאו" onclick="selectTool('capcut')" class="tool-btn locked">🎬</button>
+            <button id="tool-falafel" title="פלאפל" onclick="selectTool('falafel')" class="tool-btn locked">🧆</button>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 w-full max-w-sm">
+            <button id="upgrade-iphone-btn" onclick="upgradeIphone()" class="btn-upgrade-iphone text-white font-bold py-3 px-6 rounded-2xl shadow-lg transform active:scale-95 transition-all">
+                <span id="upgrade-iphone-text">קנה אייפון (100 📱)</span>
+            </button>
+
+            <button id="upgrade-watch-btn" onclick="upgradeWatch()" class="btn-upgrade-watch text-white font-bold py-3 px-6 rounded-2xl shadow-lg transform active:scale-95 transition-all hidden">
+                <span id="upgrade-watch-text">קנה שעון יד (500 📱)</span>
+            </button>
+
+            <button id="upgrade-capcut-btn" onclick="upgradeCapcut()" class="btn-upgrade-capcut text-white font-bold py-3 px-6 rounded-2xl shadow-lg transform active:scale-95 transition-all hidden">
+                <span id="upgrade-capcut-text">קנה עריכת וידאו (1500 📱)</span>
+            </button>
+
+            <button id="upgrade-falafel-btn" onclick="upgradeFalafel()" class="btn-upgrade-falafel text-white font-bold py-3 px-6 rounded-2xl shadow-lg transform active:scale-95 transition-all hidden">
+                <span id="upgrade-falafel-text">קנה פלאפל (4000 📱)</span>
+            </button>
+
+            <button id="next-level-btn" onclick="nextLevel()" class="btn-next-level text-white font-bold py-3 px-6 rounded-2xl shadow-lg transform active:scale-95 transition-all opacity-50 cursor-not-allowed" disabled>
+                סיים שלב (הגע ליעד)
+            </button>
+        </div>
+
+        <div class="mt-8 text-center bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+            <div class="text-white/70 text-sm mb-1 uppercase tracking-wider font-bold">רווח ללחיצה</div>
+            <div class="text-2xl flex items-center justify-center gap-2">
+                <span id="hit-icon-display">👊</span>
+                <span class="text-white font-black text-3xl">(+<span id="click-value">1</span>)</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let score = 0; 
+        let level = 1;
+        let targetScore = 3000;
+        let pointsToAdd = 1; 
+        let currentTool = 'fist';
+        
+        let unlockedTools = {
+            fist: { power: 1, icon: '👊' },
+            iphone: { unlocked: false, cost: 100, power: 5, icon: '📱' }, 
+            watch: { unlocked: false, cost: 500, power: 25, icon: '⌚' },
+            capcut: { unlocked: false, cost: 1500, power: 80, icon: '🎬' },
+            falafel: { unlocked: false, cost: 4000, power: 250, icon: '🧆' }
+        };
+
+        const hitElement = document.getElementById('hit-element');
+        const wrapper = document.getElementById('character-wrapper');
+        const hitIconDisplay = document.getElementById('hit-icon-display');
+        
+        const upgradeWatchBtn = document.getElementById('upgrade-watch-btn');
+        const upgradeCapcutBtn = document.getElementById('upgrade-capcut-btn');
+        const upgradeFalafelBtn = document.getElementById('upgrade-falafel-btn');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+
+        // פונקציה לטיפול במקרה שהתמונה לא נטענת
+        function handleImageError(img) {
+            img.style.display = 'none';
+            img.parentElement.innerHTML = '<span class="text-9xl">🧔</span>';
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = Math.floor(score);
+            document.getElementById('level-count').innerText = level;
+            document.getElementById('click-value').innerText = pointsToAdd;
+            document.getElementById('target-display').innerText = targetScore;
+
+            const progress = Math.min(100, (score / targetScore) * 100);
+            document.getElementById('progress-bar').style.width = progress + "%";
+
+            updateUpgradeButton('upgrade-iphone-btn', 'iphone', "אייפון בבעלותך ✅");
+            
+            if (unlockedTools.iphone.unlocked) {
+                upgradeWatchBtn.classList.remove('hidden');
+                updateUpgradeButton('upgrade-watch-btn', 'watch', "שעון יד בבעלותך ✅");
+            }
+            
+            if (unlockedTools.watch.unlocked) {
+                upgradeCapcutBtn.classList.remove('hidden');
+                updateUpgradeButton('upgrade-capcut-btn', 'capcut', "עריכת וידאו בבעלותך ✅");
+            }
+            
+            if (unlockedTools.capcut.unlocked) {
+                upgradeFalafelBtn.classList.remove('hidden');
+                updateUpgradeButton('upgrade-falafel-btn', 'falafel', "פלאפל בבעלותך ✅");
+            }
+
+            if (score >= targetScore) {
+                nextLevelBtn.disabled = false;
+                nextLevelBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                nextLevelBtn.innerText = "סיים שלב ועבור לשלב הבא!";
+            } else {
+                nextLevelBtn.disabled = true;
+                nextLevelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                nextLevelBtn.innerText = "סיים שלב (הגע ליעד)";
+            }
+
+            Object.keys(unlockedTools).forEach(toolKey => {
+                const btn = document.getElementById('tool-' + toolKey);
+                if (toolKey !== 'fist') {
+                    btn.classList.toggle('locked', !unlockedTools[toolKey].unlocked);
+                }
+                btn.classList.toggle('active', currentTool === toolKey);
+            });
+
+            hitIconDisplay.innerText = unlockedTools[currentTool].icon;
+            pointsToAdd = unlockedTools[currentTool].power;
+        }
+
+        function updateUpgradeButton(id, toolKey, ownedText) {
+            const btn = document.getElementById(id);
+            const tool = unlockedTools[toolKey];
+            if (tool.unlocked) {
+                btn.disabled = true;
+                btn.querySelector('span').innerText = ownedText;
+            } else {
+                btn.disabled = score < tool.cost;
+            }
+        }
+
+        function selectTool(tool) {
+            if (unlockedTools[tool].unlocked || tool === 'fist') {
+                currentTool = tool;
+                updateUI();
+                const name = tool === 'capcut' ? "עריכת וידאו" : (tool === 'fist' ? "אגרוף" : unlockedTools[tool].icon);
+                showNotification("עברת ל" + name);
+            } else {
+                showNotification("הכלי הזה עדיין נעול!", false);
+            }
+        }
+
+        function showNotification(text, success = true) {
+            const nav = document.getElementById('notification');
+            nav.innerText = text;
+            nav.style.background = success ? 'linear-gradient(90deg, #3b82f6, #2563eb)' : 'linear-gradient(90deg, #ef4444, #dc2626)';
+            nav.style.display = 'block';
+            setTimeout(() => nav.style.display = 'none', 1500);
+        }
+
+        function handleHit(e) {
+            if (e.type === 'touchstart') e.preventDefault();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+            if (clientX && clientY) {
+                hitElement.innerText = "+" + pointsToAdd;
+                hitElement.style.left = (clientX - 20) + 'px';
+                hitElement.style.top = (clientY - 20) + 'px';
+                hitElement.classList.remove('hit-active');
+                void hitElement.offsetWidth; 
+                hitElement.classList.add('hit-active');
+            }
+
+            score += pointsToAdd;
+            updateUI();
+
+            setTimeout(() => {
+                hitElement.classList.remove('hit-active');
+            }, 400);
+        }
+
+        function upgradeIphone() {
+            if (score >= unlockedTools.iphone.cost && !unlockedTools.iphone.unlocked) {
+                score -= unlockedTools.iphone.cost; 
+                unlockedTools.iphone.unlocked = true;
+                currentTool = 'iphone'; 
+                updateUI();
+                showNotification("קנית אייפון! (+5 📱)");
+            }
+        }
+
+        function upgradeWatch() {
+            if (score >= unlockedTools.watch.cost && !unlockedTools.watch.unlocked) {
+                score -= unlockedTools.watch.cost;
+                unlockedTools.watch.unlocked = true;
+                currentTool = 'watch'; 
+                updateUI();
+                showNotification("קנית שעון יד! (+25 📱)");
+            }
+        }
+
+        function upgradeCapcut() {
+            if (score >= unlockedTools.capcut.cost && !unlockedTools.capcut.unlocked) {
+                score -= unlockedTools.capcut.cost;
+                unlockedTools.capcut.unlocked = true;
+                currentTool = 'capcut'; 
+                updateUI();
+                showNotification("למדת עריכת וידאו! (+80 📱)");
+            }
+        }
+
+        function upgradeFalafel() {
+            if (score >= unlockedTools.falafel.cost && !unlockedTools.falafel.unlocked) {
+                score -= unlockedTools.falafel.cost;
+                unlockedTools.falafel.unlocked = true;
+                currentTool = 'falafel'; 
+                updateUI();
+                showNotification("קנית פלאפל! השדרוג הסופי! (+250 📱)");
+            }
+        }
+
+        function nextLevel() {
+            if (score >= targetScore) {
+                level += 1;
+                score = 0; 
+                targetScore = Math.floor(targetScore * 1.5);
+                updateUI();
+                showNotification("שלב " + level + " התחיל! היעד גדל!");
+            }
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
